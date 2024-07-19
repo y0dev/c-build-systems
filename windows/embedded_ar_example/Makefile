@@ -28,20 +28,22 @@ INC_DIRS := $(addprefix -I,$(INC_DIRS))
 # Command to remove directories (Windows)
 RMDIR := rd /s /q
 
-# Compiler and archiver commands
-CC       := gcc
-AR       := ar
-CPPFLAGS := -I$(INC_DIR) $(INC_DIRS) -MMD -MP  # Include directory, generate dependencies
+# Compiler and archiver commands for MicroBlaze
+CC       := mb-gcc
+AR       := mb-ar
+CPPFLAGS := -I$(INC_DIR) -MMD -MP
 
-# Compiler flags for preprocessor, compiler, and linker
-CFLAGS   := -Wall -Werror           # Show all warnings, treat warnings as errors
+# Compiler flags for MicroBlaze
+CFLAGS   := -Wall -Werror -mcpu=v11.0 -mxl-mode -meb
 
+# -mcpu=v11.0: Specifies the MicroBlaze CPU version.
+# -mxl-mode: Enables MicroBlaze extended mode instructions.
+# -meb: Sets the endianness to big-endian. Use `-mel` for little-endian.
 
 # Linker flags (not needed for archiving, but kept for reference)
 LDFLAGS  :=
 
-# Phony targets to prevent conflicts with files of the same name
-.PHONY: all clean archive echoes
+.PHONY: all clean archive
 
 # Default target: build the archive
 all: archive
@@ -53,7 +55,6 @@ $(LIB): $(OBJ) | $(LIB_DIR)
 # Rule to compile source files into object files
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 	@mkdir $(dir $@) 2> NUL
-	@echo "$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@"
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 # Rule to create necessary directories
@@ -67,10 +68,6 @@ clean:
 
 # Explicit target to create the archive
 archive: $(LIB)
-
-echoes:
-	@echo "Include Directories: $(INC_DIRS) -I$(INC_DIR)"
-	@echo "Source Directories: $(SRC_DIR)"
 
 # Include dependency files
 -include $(OBJ:.o=.d)
