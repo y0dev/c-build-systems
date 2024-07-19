@@ -34,11 +34,13 @@ AR       := mb-ar
 CPPFLAGS := -I$(INC_DIR) $(INC_DIRS) -MMD -MP  # Include directory, generate dependencies
 
 # Compiler flags for MicroBlaze
-CFLAGS   := -Wall -Werror -mcpu=v11.0 -mxl-mode -meb
+CFLAGS   := -Wall -Werror -mcpu=v11.0 -mxl-mode -meb -fmessage-length=0
 
 # -mcpu=v11.0: Specifies the MicroBlaze CPU version.
 # -mxl-mode: Enables MicroBlaze extended mode instructions.
 # -meb: Sets the endianness to big-endian. Use `-mel` for little-endian.
+# -fmessage-length=0: Do not wrap diagnostic messages, useful for environments with limited screen width.
+
 
 # Linker flags (not needed for archiving, but kept for reference)
 LDFLAGS  :=
