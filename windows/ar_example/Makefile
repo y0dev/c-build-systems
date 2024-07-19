@@ -15,6 +15,12 @@ SRC := $(subst $(SRC_DIR)\,$(SRC_DIR)/,$(SRC))  # Convert backslashes to forward
 # Corresponding object files in the object directory
 OBJ := $(subst $(SRC_DIR)\,$(OBJ_DIR)\,$(SRC:.c=.o))
 
+# Find all include directories in the source directory and subdirectories
+INC_DIRS := $(shell cd $(INC_DIR) && dir /s /b /ad)
+INC_DIRS := $(sort $(INC_DIRS))  # Remove duplicates
+INC_DIRS := $(subst \,/,$(INC_DIRS))  # Convert backslashes to forward slashes
+INC_DIRS := $(addprefix -I,$(INC_DIRS))
+
 # Command to remove directories (Windows)
 RMDIR := rd /s /q
 
