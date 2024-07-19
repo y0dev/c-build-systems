@@ -1,15 +1,13 @@
-# Source, Object, Binary, Include, and Library directories
 SRC_DIR  := sources
 OBJ_DIR  := build\obj
-LIB_DIR  := libraries
+BIN_DIR  := build
 REL_INC_DIR := include
 
-# Convert the relative include directory to an absolute path
-INC_DIR := $(realpath $(REL_INC_DIR))
-LIB_NAME := libarithmetic.a
+LIB_DIR  := libraries
+EXE_NAME := helloworld.elf
 
-# Path to the static library
-LIB := $(LIB_DIR)/$(LIB_NAME)
+# Path to the elf
+EXE := $(BIN_DIR)/$(EXE_NAME)
 
 # Find all source files in the source directory and subdirectories
 SRC := $(shell dir /b /s $(SRC_DIR)\*.c)
@@ -28,9 +26,9 @@ INC_DIRS := $(addprefix -I,$(INC_DIRS))
 # Command to remove directories (Windows)
 RMDIR := rd /s /q
 
-# Compiler and archiver commands for MicroBlaze
+# Compiler command for MicroBlaze
 CC       := mb-gcc
-AR       := mb-ar
+
 CPPFLAGS := -I$(INC_DIR) $(INC_DIRS) -MMD -MP  # Include directory, generate dependencies
 
 # Compiler flags for MicroBlaze
@@ -40,35 +38,34 @@ CFLAGS   := -Wall -Werror -mcpu=v11.0 -mxl-mode -meb
 # -mxl-mode: Enables MicroBlaze extended mode instructions.
 # -meb: Sets the endianness to big-endian. Use `-mel` for little-endian.
 
-# Linker flags (not needed for archiving, but kept for reference)
-LDFLAGS  :=
+# Linker flags
+LDFLAGS  := -L$(LIB_DIR)
+LDLIBS   := -lm -static $(patsubst $(LIB_DIR)\lib*.a, -l$(LIB_DIR)\*, $(wildcard $(LIB_DIR)/lib*.a))
 
 # Phony targets to prevent conflicts with files of the same name
-.PHONY: all clean archive
+.PHONY: all clean
 
 # Default target: build the archive
-all: archive
+all: $(EXE)
 
-# Rule to build the static library (archive)
-$(LIB): $(OBJ) | $(LIB_DIR)
-	$(AR) rcs $@ $^
+# Rule to build the binary
+$(EXE): $(OBJ) | $(BIN_DIR)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 # Rule to compile source files into object files
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 	@mkdir $(dir $@) 2> NUL
+	@echo "$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@"
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 # Rule to create necessary directories
-$(OBJ_DIR) $(LIB_DIR):
+$(BIN_DIR) $(OBJ_DIR):
 	if not exist "$@" mkdir $@
 
-# Rule to clean the build: remove object files and the static library
+# Rule to clean the build: remove object files and the binaries
 clean:
+	@if exist $(BIN_DIR) $(RMDIR) $(BIN_DIR)
 	@if exist $(OBJ_DIR) $(RMDIR) $(OBJ_DIR)
-	@if exist $(LIB_DIR)\$(LIB_NAME) del $(LIB_DIR)\$(LIB_NAME)
-
-# Explicit target to create the archive
-archive: $(LIB)
 
 # Include dependency files
 -include $(OBJ:.o=.d)
