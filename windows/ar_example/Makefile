@@ -2,7 +2,10 @@
 SRC_DIR  := sources
 OBJ_DIR  := build\obj
 LIB_DIR  := libraries
-INC_DIR  := include
+REL_INC_DIR := include
+
+# Convert the relative include directory to an absolute path
+INC_DIR := $(realpath $(REL_INC_DIR))
 LIB_NAME := libarithmetic.a
 
 # Path to the static library
@@ -14,6 +17,7 @@ SRC := $(subst $(SRC_DIR)\,$(SRC_DIR)/,$(SRC))  # Convert backslashes to forward
 
 # Corresponding object files in the object directory
 OBJ := $(subst $(SRC_DIR)\,$(OBJ_DIR)\,$(SRC:.c=.o))
+
 
 # Find all include directories in the source directory and subdirectories
 INC_DIRS := $(shell cd $(INC_DIR) && dir /s /b /ad)
@@ -29,11 +33,11 @@ CC       := gcc
 AR       := ar
 
 # Compiler flags for preprocessor, compiler, and linker
-CPPFLAGS := -I$(INC_DIR) -MMD -MP  # Include directory, generate dependencies
+CPPFLAGS := -I$(INC_DIR) $(INC_DIRS) -MMD -MP  # Include directory, generate dependencies
 CFLAGS   := -Wall -Werror           # Show all warnings, treat warnings as errors
 
 # Phony targets to prevent conflicts with files of the same name
-.PHONY: all clean archive
+.PHONY: all clean archive echoes
 
 # Default target: build the archive
 all: archive
@@ -45,6 +49,7 @@ $(LIB): $(OBJ) | $(LIB_DIR)
 # Rule to compile source files into object files
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 	@mkdir $(dir $@) 2> NUL
+	@echo "$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@"
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 # Rule to create necessary directories
@@ -58,6 +63,10 @@ clean:
 
 # Explicit target to create the archive
 archive: $(LIB)
+
+echoes:
+	@echo "Include Directories: $(INC_DIRS) -I$(INC_DIR)"
+	@echo "Source Directories: $(SRC_DIR)"
 
 # Include dependency files
 -include $(OBJ:.o=.d)

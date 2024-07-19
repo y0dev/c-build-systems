@@ -1,4 +1,5 @@
 #include "arithmetic.h"
+#include "debug/debug,h"
 
 int add(int a, int b) 
 {
