@@ -66,8 +66,8 @@ $(OBJ_DIR):
 
 # Rule to clean the build: remove object files and the static library
 clean:
+	@if exist $(BIN_DIR) $(RMDIR) $(BIN_DIR)
 	@if exist $(OBJ_DIR) $(RMDIR) $(OBJ_DIR)
-	@if exist $(LIB_DIR) $(RMDIR) $(LIB_DIR)
 
 # Explicit target to create the archive
 archive: $(LIB)
