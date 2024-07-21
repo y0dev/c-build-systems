@@ -28,13 +28,20 @@ INC_DIRS := $(addprefix -I,$(INC_DIRS))
 # Command to remove directories (Windows)
 RMDIR := rd /s /q
 
-# Compiler and archiver commands for MicroBlaze
-CC       := mb-gcc
-AR       := mb-ar
+# Compiler and archiver commands for ARM
+CC       := arm-none-eabi-gcc
+AR       := arm-none-eabi-ar
 CPPFLAGS := -I$(INC_DIR) $(INC_DIRS) -MMD -MP  # Include directory, generate dependencies
 
-# Compiler flags for MicroBlaze
-CFLAGS   := -Wall -Werror -mcpu=v11.0 -mxl-mode -meb -fmessage-length=0
+# Compiler flags for ARM
+CFLAGS   := -Wall -Werror -mcpu=cortex-m4 -mthumb -O2 -ffunction-sections -fdata-sections -fmessage-length=0
+
+# -mcpu=cortex-m4: Specifies the ARM Cortex-M4 CPU.
+# -mthumb: Generates code for the Thumb instruction set.
+# -O2: Optimization level 2.
+# -ffunction-sections, -fdata-sections: Places each function or data item in its own section.
+# -fmessage-length=0: Do not wrap diagnostic messages, useful for environments with limited screen width.
+
 
 # -mcpu=v11.0: Specifies the MicroBlaze CPU version.
 # -mxl-mode: Enables MicroBlaze extended mode instructions.

@@ -1,5 +1,6 @@
 {
   "files.associations": {
-    "ar.h": "c"
+    "ar.h": "c",
+    "arithmetic.h": "c"
   }
 }
