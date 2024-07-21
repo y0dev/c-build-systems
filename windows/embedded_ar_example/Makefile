@@ -1,7 +1,7 @@
 # Source, Object, Binary, Include, and Library directories
 SRC_DIR  := sources
-OBJ_DIR  := build\obj
-LIB_DIR  := libraries
+BIN_DIR	 := bin
+OBJ_DIR  := $(BIN_DIR)\obj
 REL_INC_DIR := include
 
 # Convert the relative include directory to an absolute path
@@ -9,14 +9,15 @@ INC_DIR := $(realpath $(REL_INC_DIR))
 LIB_NAME := libarithmetic.a
 
 # Path to the static library
-LIB := $(LIB_DIR)/$(LIB_NAME)
+LIB := $(BIN_DIR)/$(LIB_NAME)
 
 # Find all source files in the source directory and subdirectories
-SRC := $(shell cd $(SRC_DIR) && dir /b /s *.c 2> NUL)
-SRC := $(subst \,/,$(SRC))  # Convert backslashes to forward slashes
+C_SRCS := $(shell forfiles /P $(SRC_DIR) /S /M *.c /C "cmd /c echo @relpath")
+C_SRCS := $(subst ",,$(C_SRCS))	# Remove quotes from path
+C_SRCS := $(subst .\,$(SRC_DIR)/,$(C_SRCS))	# Replace .\ to source directory path
 
 # Corresponding object files in the object directory
-OBJ := $(subst $(SRC_DIR)/,$(OBJ_DIR)/,$(SRC:.c=.o))
+OBJ := $(subst $(SRC_DIR)/,$(OBJ_DIR)/,$(C_SRCS:.c=.o))
 
 # Find all include directories in the source directory and subdirectories
 INC_DIRS := $(shell cd $(INC_DIR) && dir /s /b /ad 2> NUL)
@@ -51,17 +52,17 @@ LDFLAGS  :=
 all: archive
 
 # Rule to build the static library (archive)
-$(LIB): $(OBJ) | $(LIB_DIR)
+$(LIB): $(OBJ)
 	$(AR) rcs $@ $^
 
 # Rule to compile source files into object files
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
-	@mkdir $(dir $@) 2> NUL
+	@if not exist "$(dir $@)" mkdir "$(dir $@)"
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 # Rule to create necessary directories
-$(OBJ_DIR) $(LIB_DIR):
-	if not exist "$@" mkdir $@
+$(OBJ_DIR):
+	@if not exist "$@" mkdir $@
 
 # Rule to clean the build: remove object files and the static library
 clean:
@@ -74,6 +75,7 @@ archive: $(LIB)
 echoes:
 	@echo "Include Directories: $(INC_DIRS) -I$(INC_DIR)"
 	@echo "Source Directories: $(SRC_DIR)"
+	@echo "Source Files: $(C_SRCS)"
 	@echo "Object Directories: $(OBJ_DIR)"
 	@echo "Object files: $(OBJ)"
 
