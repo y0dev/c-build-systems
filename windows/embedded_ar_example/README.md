@@ -1,133 +1,177 @@
 # Makefile Project: Windows
-**This is the makefile intended for usage with windows command line (not powershell). This document explains the structure of the project, and how they relate to the makefile.**
+
+**This is the makefile intended for usage with the Windows command line (not PowerShell). This document explains the structure of the project and how it relates to the makefile.**
 
 ## Building this project
+
 ### Requirements
-1. **gcc**: It's a little tricky on windows, but this guide should be of help: https://code.visualstudio.com/docs/cpp/config-mingw
-2. **make**: After installing, you will alreade have mingw32. Look for the mingw32 way in this guide, and you can skip the installation and proceed to step 6. https://www.technewstoday.com/install-and-use-make-in-windows/
+
+1. **MicroBlaze GCC**: Ensure that you have the appropriate MicroBlaze GCC compiler installed.
+2. **Make**: After installing, you will already have `mingw32-make`. Look for the `mingw32-make` way in this guide, and you can skip the installation and proceed to step 6. https://www.technewstoday.com/install-and-use-make-in-windows/
 
 ### Build flow
-1. Clone this repository from windows cmd: `> git clone https://github.com/Goldan32/c-build-systems.git`
+
+1. Clone this repository from the Windows cmd: `> git clone https://github.com/Goldan32/c-build-systems.git`
 2. Go to the windows folder: `> cd c-build-systems\windows`
 3. Build the project: `> make all`
-4. Test the project: `> .\build\helloworld.exe`
+4. Test the project (if applicable): `> .\bin\helloworld.exe`
 
 Output should be:
+
 ```
 Hello World!
 Hello from another file!
 Static library says 3*3 is 9
 ```
-5. Test clean target: `> make all`
+
+5. Test clean target: `> make clean`
 
 ## Project structure
+
 ### Defining folders
+
 ```
 SRC_DIR  := sources         # .c source files
-OBJ_DIR  := build\obj       # object files created during compilation
-BIN_DIR  := build           # folder containing the binary (.exe) output
-INC_DIR  := include         # .h source files
-LIB_DIR  := libraries       # .a (static library) source files
-EXE_NAME := helloworld.exe  # name of the executable
+BIN_DIR  := bin             # folder containing the binary (.exe) output
+OBJ_DIR  := $(BIN_DIR)\obj  # object files created during compilation
+REL_INC_DIR := include      # .h source files
+LIB_NAME := libarithmetic.a # name of the static library
 ```
-These variables define where the makefile will search for the source files. The names of these folders and files can be changed freely. In the current setup the obj directory is in the BIN_DIR directory, however it could be in the project root folder separately just by changing its value here.
+
+These variables define where the makefile will search for the source files. The names of these folders and files can be changed freely. The `OBJ_DIR` is nested within the `BIN_DIR`, but it could be placed in the project root folder separately by changing its value here.
 
 ### Defining targets
 
 ```
-EXE := $(BIN_DIR)/$(EXE_NAME)
+LIB := $(BIN_DIR)/$(LIB_NAME)
 ```
-This is the final target, the executable. We define it so it will be located in the BIN_DIR folder.
+
+This is the final target, the static library. We define it so it will be located in the `BIN_DIR` folder.
+
 ```
-SRC := $(wildcard $(SRC_DIR)/*.c)
+C_SRCS := $(shell forfiles /P $(SRC_DIR) /S /M *.c /C "cmd /c echo @relpath")
+C_SRCS := $(subst ",,$(C_SRCS))  # Remove quotes from path
+C_SRCS := $(subst .\,$(SRC_DIR)/,$(C_SRCS))  # Replace .\ to source directory path
 ```
-This is where the .c sources are collected. The `wildcard` function lists all the files mathing the pattern in its argument. In this case it matches all the files ending with ".c" in the SRC_DIR directory.
+
+This is where the `.c` sources are collected. The `forfiles` command lists all the files matching the pattern in its argument. The `subst` function removes quotes and adjusts paths.
+
 ```
-OBJ := $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
+OBJ := $(subst $(SRC_DIR)/,$(OBJ_DIR)/,$(C_SRCS:.c=.o))
 ```
-This is where the object files are collected. These files match the names of the .c source files, the difference is the extension. We can list the object files with the already defined .c source files.
+
+This is where the object files are collected. These files match the names of the `.c` source files, but with an `.o` extension.
+
+### Include directories
+
+```
+INC_DIR := $(realpath $(REL_INC_DIR))
+INC_DIRS := $(shell cd $(INC_DIR) && dir /s /b /ad 2> NUL)
+INC_DIRS := $(sort $(INC_DIRS))  # Remove duplicates
+INC_DIRS := $(subst \,/,$(INC_DIRS))  # Convert backslashes to forward slashes
+INC_DIRS := $(addprefix -I,$(INC_DIRS))
+```
+
+The `INC_DIR` is the absolute path to the include directory. The `INC_DIRS` variable collects all the include directories in the source directory and subdirectories, removes duplicates, converts backslashes to forward slashes, and adds the `-I` prefix.
 
 ### Various other defines
+
 ```
 RMDIR := rd /s /q
 ```
-The standard makefile defines some variables. RMDIR and RM is such variables, but we can explicitly redifine it. This definition is equal to the linux command `rm -rf` in windows cmd form.
+
+The standard makefile defines some variables. `RMDIR` is such a variable, but we can explicitly redefine it. This definition is equivalent to the Linux command `rm -rf` in Windows cmd form.
 
 ### Compile flags
-```
-CC       := gcc
-```
-CC stands for C compiler. Its default value would be gcc here, but we can define it explicitly for clarity
 
 ```
-CPPFLAGS := -I$(INC_DIR) -MMD -MP
+CC       := mb-gcc
+AR       := mb-ar
+CPPFLAGS := -I$(INC_DIR) $(INC_DIRS) -MMD -MP -MF"$(@:%.o=%.d)" -MT"$@"
+CFLAGS   := -Wall -Werror -mcpu=v11.0 -mxl-mode -meb -fmessage-length=0
 ```
-CPPFLAGS stands for C PreProcessor Flags. Here we have the option to define our include directory, and instruct the preprocessor, to look for the header files there. We can also pass other flags like -MMD and -MP. These options are necessary in a makefile. The explaination is out of the scope of this document, but can be found here: https://gcc.gnu.org/onlinedocs/gcc/Preprocessor-Options.html
 
-```
-CFLAGS   := -Wall -Werror
-```
-Here we can pass flags to the compiler, not the preprocessor.
+`CC` stands for C compiler, and `AR` stands for archiver. `CPPFLAGS` stands for C PreProcessor Flags, allowing us to define our include directory and other preprocessor options. `CFLAGS` are flags passed to the compiler.
 
-```
-LDFLAGS  := -L$(LIB_DIR)
-```
-The -L flag is used to point to the folder where static libraries are.
+- `-mcpu=v11.0`: Specifies the MicroBlaze CPU version.
+- `-mxl-mode`: Enables MicroBlaze extended mode instructions.
+- `-meb`: Sets the endianness to big-endian. Use `-mel` for little-endian.
+- `-fmessage-length=0`: Do not wrap diagnostic messages, useful for environments with limited screen width.
 
-```
-LDLIBS   := -lm -static $(patsubst $(LIB_DIR)\lib*.a, -l$(LIB_DIR)\*, $(wildcard $(LIB_DIR)/lib*.a))
-```
-This variable will list all the static library, .a files located in the folder defined above. The `patsubst` function substitutes the second argument in the place of the first, wherever the pattern matches the third argument. It is used to trim the extension from the end and the "lib" from the name of the .a files, and write "-l" to the beginning. All static libraries start with "lib", but the linker knows this, and writes it for us automatically, thus we need to trim it before passing it as argument.
+### Explanation of Dependency Flags
 
-The -l flag is used to point to one static library, so we have to use it multiple times here
-
-The `wildcard` function is once again used to list files with a given extension.
+- `-MMD`: Generate dependency files alongside the object files, listing the dependencies for each `.o` file without including system headers.
+- `-MP`: Add a phony target for each dependency to prevent `make` from failing if a header file is removed.
+- `-MF"$(@:%.o=%.d)"`: Specify the name of the file to which the dependencies should be written, replacing the `.o` extension with `.d`.
+- `-MT"$@"`: Change the target of the rule emitted by dependency generation, ensuring dependencies are correctly attributed to the object file being generated.
 
 ### Phony targets
+
 ```
-.PHONY: all clean
+.PHONY: all clean archive echoes
 ```
-Normally a target is a name of a file. Phony targets are not interpreted as a file name, even a file exists with such name. Phony targets are used to collect multiple other targets most of the time.
+
+Phony targets are not interpreted as file names, even if a file exists with such a name. Phony targets are used to collect multiple other targets most of the time.
 
 ## Target recipes
-```
-all: $(EXE)
-```
-The all target is a convention, it is the final target of the project.
 
 ```
-$(EXE): $(OBJ) | $(BIN_DIR)
-	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+all: archive
 ```
-This part says that to build the executable file, we will need the object files and the BIN_DIR folder. If any of those are not ready or up to date, their recipes will execute.
 
-$^ refers to all the prerequisites of the current target
+The `all` target is a convention; it is the final target of the project.
 
-$@ refers to the target
+```
+$(LIB): $(OBJ)
+	$(AR) rcs $@ $^
+```
+
+This part says that to build the static library, we will need the object files. If any of those are not ready or up-to-date, their recipes will execute.
 
 ```
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
+	@if not exist "$(dir $@)" mkdir "$(dir $@)"
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 ```
-This is the recipe for the object files. Their prerequisites are the corresponding .c files and the existence of the OBJ_DIR
 
-$< refers to the firs prerequisite of the current target
+This is the recipe for the object files. Their prerequisites are the corresponding `.c` files and the existence of the `OBJ_DIR`.
 
 ```
-$(BIN_DIR) $(OBJ_DIR):
-	if not exist "$@" mkdir $@
+$(OBJ_DIR):
+	@if not exist "$@" mkdir $@
 ```
-This is the recipe for the object and binary folders. If they don't exist, the makefile creates them here.
+
+This is the recipe for creating the object directory. If it doesn't exist, the makefile creates it here.
 
 ```
 clean:
-	@if exist $(BIN_DIR) $(RMDIR) $(BIN_DIR)
 	@if exist $(OBJ_DIR) $(RMDIR) $(OBJ_DIR)
+	@if exist $(LIB_DIR) $(RMDIR) $(LIB_DIR)
 ```
-The clean target deletes everithing that is created during the compile process
+
+The `clean` target deletes everything that is created during the compile process.
+
+```
+archive: $(LIB)
+```
+
+The `archive` target creates the static library.
+
+```
+echoes:
+	@echo "Include Directories: $(INC_DIRS) -I$(INC_DIR)"
+	@echo "Source Directories: $(SRC_DIR)"
+	@echo "Source Files: $(C_SRCS)"
+	@echo "Object Directories: $(OBJ_DIR)"
+	@echo "Object files: $(OBJ)"
+```
+
+The `echoes` target prints out the collected directories and files for debugging purposes.
 
 ### Include other makefile sources
+
 ```
 -include $(OBJ:.o=.d)
 ```
-gcc creates a .d file for every .o file, which contain makefile rules, so they are included here.
+
+GCC creates a `.d` file for every `.o` file, which contains makefile rules, so they are included here.
