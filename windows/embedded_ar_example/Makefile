@@ -12,15 +12,14 @@ LIB_NAME := libarithmetic.a
 LIB := $(LIB_DIR)/$(LIB_NAME)
 
 # Find all source files in the source directory and subdirectories
-SRC := $(shell dir /b /s $(SRC_DIR)\*.c)
-SRC := $(subst $(SRC_DIR)\,$(SRC_DIR)/,$(SRC))  # Convert backslashes to forward slashes
+SRC := $(shell cd $(SRC_DIR) && dir /b /s *.c 2> NUL)
+SRC := $(subst \,/,$(SRC))  # Convert backslashes to forward slashes
 
 # Corresponding object files in the object directory
-OBJ := $(subst $(SRC_DIR)\,$(OBJ_DIR)\,$(SRC:.c=.o))
-
+OBJ := $(subst $(SRC_DIR)/,$(OBJ_DIR)/,$(SRC:.c=.o))
 
 # Find all include directories in the source directory and subdirectories
-INC_DIRS := $(shell cd $(INC_DIR) && dir /s /b /ad)
+INC_DIRS := $(shell cd $(INC_DIR) && dir /s /b /ad 2> NUL)
 INC_DIRS := $(sort $(INC_DIRS))  # Remove duplicates
 INC_DIRS := $(subst \,/,$(INC_DIRS))  # Convert backslashes to forward slashes
 INC_DIRS := $(addprefix -I,$(INC_DIRS))
@@ -46,7 +45,7 @@ CFLAGS   := -Wall -Werror -mcpu=v11.0 -mxl-mode -meb -fmessage-length=0
 LDFLAGS  :=
 
 # Phony targets to prevent conflicts with files of the same name
-.PHONY: all clean archive
+.PHONY: all clean archive echoes
 
 # Default target: build the archive
 all: archive
@@ -67,10 +66,16 @@ $(OBJ_DIR) $(LIB_DIR):
 # Rule to clean the build: remove object files and the static library
 clean:
 	@if exist $(OBJ_DIR) $(RMDIR) $(OBJ_DIR)
-	@if exist $(LIB_DIR)\$(LIB_NAME) del $(LIB_DIR)\$(LIB_NAME)
+	@if exist $(LIB_DIR) $(RMDIR) $(LIB_DIR)
 
 # Explicit target to create the archive
 archive: $(LIB)
+
+echoes:
+	@echo "Include Directories: $(INC_DIRS) -I$(INC_DIR)"
+	@echo "Source Directories: $(SRC_DIR)"
+	@echo "Object Directories: $(OBJ_DIR)"
+	@echo "Object files: $(OBJ)"
 
 # Include dependency files
 -include $(OBJ:.o=.d)
