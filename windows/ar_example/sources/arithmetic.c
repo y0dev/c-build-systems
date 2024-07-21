@@ -1,8 +1,9 @@
 #include "arithmetic.h"
-#include "debug/debug,h"
+#include "debug.h"
 
 int add(int a, int b) 
 {
+    print_debug("Adding numbers");
     return a + b;
 }
 
