@@ -1,5 +1,5 @@
 # Define the main source directories containing both source and header files
-SRC_DIRS := arithmetic utils
+SRC_DIRS := arithmetric utils
 
 # Define output directories
 BIN_DIR  := bin
@@ -9,15 +9,6 @@ LIB_NAME := libcombined.a
 # Path to the static library
 LIB := $(BIN_DIR)/$(LIB_NAME)
 
-# Find all source files (.c) in the specified source directories recursively using forfiles
-C_SRCS := $(foreach dir,$(SRC_DIRS),$(shell forfiles /P $(dir) /S /M *.c /C "cmd /c echo @relpath"))
-C_SRCS := $(subst ",,$(C_SRCS))  # Remove quotes from paths
-C_SRCS := $(subst .\,,$(C_SRCS))  # Remove leading .\ from the paths
-C_SRCS := $(addprefix $(dir)/,$(C_SRCS))  # Add source directory prefix
-
-# Corresponding object files in the object directory
-OBJ := $(subst $(SRC_DIR)/,$(OBJ_DIR)/,$(C_SRCS:.c=.o))
-
 # Find all include directories in the source directory and subdirectories using forfiles
 INC_DIRS := $(foreach dir,$(SRC_DIRS),$(shell forfiles /P $(dir) /S /M * /C "cmd /c echo @relpath"))
 INC_DIRS := $(subst ",,$(INC_DIRS))
@@ -25,9 +16,18 @@ INC_DIRS := $(sort $(dir $(INC_DIRS)))
 INC_DIRS := $(filter-out $(SRC_DIRS)\.git\,$(INC_DIRS))  # Exclude .git directory
 INC_DIRS := $(addprefix -I,$(INC_DIRS))
 
+
+# Find all source files in the source directory and subdirectories
+C_SRCS := $(foreach dir,$(SRC_DIRS),$(shell forfiles /P $(dir) /S /M *.c /C "cmd /c echo @relpath"))
+C_SRCS := $(subst ",,$(C_SRCS))  # Remove quotes from paths
+C_SRCS := $(subst .\,$(SRC_DIR)/,$(C_SRCS))	# Replace .\ to source directory path
+
+# Corresponding object files in the object directory
+OBJ := $(patsubst /%, $(OBJ_DIR)/%, $(C_SRCS:.c=.o))
+
 # Compiler and flags
 CC       := gcc
-CPPFLAGS := $(INC_DIRS) -MMD -MP  # Include directories and generate dependency files
+CPPFLAGS := $(INC_DIRS) -MMD -MP # Include directories and generate dependency files
 CFLAGS   := -Wall -Werror
 
 # Phony targets to prevent conflicts with files of the same name
