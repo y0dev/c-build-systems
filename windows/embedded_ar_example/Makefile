@@ -10,20 +10,21 @@ LIB_NAME := libcombined.a
 LIB := $(BIN_DIR)/$(LIB_NAME)
 
 # Find all include directories in the source directory and subdirectories using forfiles
-INC_DIRS := $(foreach dir,$(SRC_DIRS),$(shell forfiles /P $(dir) /S /M * /C "cmd /c echo @relpath"))
+INC_DIRS := $(foreach dir,$(SRC_DIRS),$(shell forfiles /P $(dir) /S /M * /C "cmd /c echo $(dir)@relpath"))
 INC_DIRS := $(subst ",,$(INC_DIRS))
+INC_DIRS := $(subst .\,\,$(INC_DIRS))	# Replace .\ to source directory path
 INC_DIRS := $(sort $(dir $(INC_DIRS)))
 INC_DIRS := $(filter-out $(SRC_DIRS)\.git\,$(INC_DIRS))  # Exclude .git directory
-INC_DIRS := $(addprefix -I,$(INC_DIRS))
+INC_DIRS := $(addprefix -I.\,$(INC_DIRS))
 
 
 # Find all source files in the source directory and subdirectories
-C_SRCS := $(foreach dir,$(SRC_DIRS),$(shell forfiles /P $(dir) /S /M *.c /C "cmd /c echo @relpath"))
+C_SRCS := $(foreach dir,$(SRC_DIRS),$(shell forfiles /P $(dir) /S /M *.c /C "cmd /c echo $(dir)@relpath"))
 C_SRCS := $(subst ",,$(C_SRCS))  # Remove quotes from paths
-C_SRCS := $(subst .\,$(SRC_DIR)/,$(C_SRCS))	# Replace .\ to source directory path
+C_SRCS := $(subst .\,/,$(C_SRCS))	# Replace .\ to source directory path
 
-# Corresponding object files in the object directory
-OBJ := $(patsubst /%, $(OBJ_DIR)/%, $(C_SRCS:.c=.o))
+# Corresponding object files in the object directory with 'bin' added to the path
+OBJ := $(patsubst %.c,$(OBJ_DIR)/%.o,$(C_SRCS))
 
 # Compiler and flags
 CC       := gcc
