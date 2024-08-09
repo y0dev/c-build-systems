@@ -18,7 +18,7 @@ C_SRCS := $(subst .\,$(SRC_DIR)/,$(C_SRCS))	# Replace .\ to source directory pat
 OBJ := $(subst $(SRC_DIR)/,$(OBJ_DIR)/,$(C_SRCS:.c=.o))
 
 # Find all include directories in the source directory and subdirectories
-INC_DIRS := $(shell cd $(INC_DIR) && dir /s /b /ad 2> NUL)
+INC_DIRS := $(shell cd $(INC_DIR) && "dir /s /b /ad 2> NUL")
 INC_DIRS := $(sort $(INC_DIRS))  # Remove duplicates
 INC_DIRS := $(subst \,/,$(INC_DIRS))  # Convert backslashes to forward slashes
 INC_DIRS := $(addprefix -I,$(INC_DIRS))

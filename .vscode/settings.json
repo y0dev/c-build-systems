@@ -1,6 +1,8 @@
 {
   "files.associations": {
     "ar.h": "c",
-    "arithmetic.h": "c"
+    "arithmetic.h": "c",
+    "debug.h": "c",
+    "add.h": "c"
   }
 }
